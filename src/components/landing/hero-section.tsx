@@ -1,11 +1,13 @@
+"use client"
+import React from 'react'
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-
-export default function Home() {
+const HeroSection = () => {
   return (
+    
     <section className="px-4 py-20">
       <div className="text-center max-w-3xl mx-auto mb-16">
-        <h1 className="text-4xl md:text-7xl font-semibold from-[#7214FF] to-[#32CAFD]  bg-gradient-to-br bg-clip-text text-transparent mb-6">
+        <h1 className="text-4xl md:text-7xl font-semibold from-accent to-[#32CAFD]  bg-gradient-to-br bg-clip-text text-transparent mb-6">
           INSTABRIX
         </h1>
         <p className="text-gray-400 mb-8">
@@ -13,12 +15,12 @@ export default function Home() {
           more.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Button className="text-white">
+          <Button >
             Get a demo
           </Button>
           <Button
             variant="outline"
-            className="text-white border-gray-700 hover:bg-gray-800"
+            className="border-accent"
           >
             View pricing
           </Button>
@@ -80,5 +82,7 @@ export default function Home() {
           </div>
 
     </section>
-  );
+  )
 }
+
+export default HeroSection

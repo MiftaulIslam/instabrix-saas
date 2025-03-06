@@ -84,11 +84,12 @@ a, span {
     --popover: 216 45% 3.9%;
     --popover-foreground: 216 10% 96.5%;
 
-    --card: 216 45% 3.9%;
-    --card-foreground: 216 10% 96.5%;
+    --card: 224 61.5% 15.3%;
+    --card-foreground: 246 6.6000000000000005% 96.5%;
 
-    --border: 216 50% 9%;
-    --input: 216 50% 9%;
+    --border: 216 82% 10%;
+    --input: 214 38% 14.1%;
+
 
     --primary: 216 100% 30%;
     --primary-foreground: 216 10% 96.5%;
@@ -97,7 +98,7 @@ a, span {
     --secondary-foreground: 216 10% 96.5%;
 
     --accent: 264, 100%, 54%;
-    --accent-foreground: 264, 100%, 54%;
+    --accent-foreground: 249 100% 82.4%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 216 10% 96.5%;
