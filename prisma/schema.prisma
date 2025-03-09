@@ -1,0 +1,459 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+  relationMode = "prisma"
+}
+//User's role
+enum Role {
+  AGENCY_OWNER
+  AGENCY_ADMIN
+  SUBACCOUNT_USER
+  SUBACCOUNT_GUEST
+}
+enum Icon {
+  settings
+  chart
+  calendar
+  check
+  chip
+  compass
+  database
+  flag
+  home
+  info
+  link
+  lock
+  messages
+  notification
+  payment
+  power
+  receipt
+  shield
+  star
+  tune
+  videorecorder
+  wallet
+  warning
+  headphone
+  send
+  pipelines
+  person
+  category
+  contact
+  clipboardIcon
+}
+
+enum ActionType{
+  CREATE_CONTACT
+}
+
+enum TriggerType{
+  CONTACT_FGRM
+}
+enum InvitationStatus{
+  ACCEPTED
+  REVOKED
+  PENDING
+}
+
+enum Plan {
+  price_10MhuI10l5Bk5htqogRXZ2e
+  price_10MhtIcId5Bk5htaxCVf5mj
+}
+
+/*purpose: Represents individuals who interact with the SaaS, such as agency owners, admins, or sub-account users/guests.
+workflow: Users are created, assigned to an agency, and granted permissions for sub-accounts. They interact with tickets, receive notifications, and perform actions based on their role and permissions.
+*/
+model User{
+  id  String @id @default(uuid())
+  name String
+  avatarUrl String @db.Text
+  email String @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  role Role @default(SUBACCOUNT_USER)
+  // Each user can only be assigned to one agency only
+  agencyId String?
+  Agency Agency? @relation(fields: [agencyId], references: [id], onDelete:Cascade)
+  //permissions besically can a user see a sub account. by default agency owner has the permission to see sub accounts but a sub account user can only see the sub accounts those the owner has given access to.
+  Permissions Permissions[]
+  //besically for kanban board
+  Tickets Ticket[]
+  Notification Notification[]
+  @@index([agencyId])
+}
+
+/*purpose: Represents a top-level business entity that manages sub-accounts, users, and stripe integrations. 
+workflow: Agency is set up, users are invited, sub-accounts are added, and Stripe subscriptions/add-ons are managed, with notifications and UI customization.
+*/
+model Agency {
+  id String @id @default(uuid())
+  //needed for stripe. using connected stripe account meaning every user can connect their own stripe account inside the application. 
+  connectAccountId String? @default("")
+  //This is for the subscription. when someone subscribes to our application through a subscription service, then we need the customerId
+  customerId String @default("")
+  name String
+  agencyLogo String @db.Text
+  companyEmail String @db.Text
+  companyPhone String 
+  //If the agency owner wants to show each sub account their own logo in the dashboard instead of their white labeled logo. 
+  whiteLabel Boolean @default(true)
+  address String
+  city String
+  zipCode String
+  state String
+  country String
+  goal Int @default(5)
+  //there are multiple users can access in a single agency
+  users User[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  subAccount SubAccount[]
+  sidebarOption AgencySidebarOption[]
+  //people can be invited to a agency through invitation
+  invitation Invitation[]
+  notification Notification[]
+  //something connected to stripe 
+  subscription  Subscription?
+  addOns AddOns[]
+  
+}
+
+/*
+Purpose: Represents a client account under an agency, managing its own funnels, media, and workflows. 
+Workflow: Sub-account is created, permissions are set, and features like funnels and Kanban boards are managed with automation and notifications. */
+model SubAccount{
+  id String @id @default(uuid())
+  connectAccountId String? @default("")
+  name String 
+  subAccountLogo String @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  companyEmail String
+  companyPhone String
+  goal Int @default(5)
+  address String 
+  city String
+  zipcode String
+  state String
+  country String
+  agencyId String
+  
+  Agency Agency @relation(fields: [agencyId], references: [id], onDelete:Cascade)
+  sidebarOption SubAccountSidebarOption[]
+  permissions Permissions[]
+  funnels Funnel[]
+  media Media[]
+  contact Contact[]
+  trigger Trigger[]
+  Automation Automation[]
+  pipeline Pipeline[]
+  Tags Tag[]
+  Notification Notification[] 
+  @@index([agencyId])
+}
+
+/*
+Purpose: Manages labels for organizing tickets in the kanban board 
+Workflow: Tags are created and assigned to tickets within a sub-account for better task management. */
+model Tag{
+  id String @id @default(uuid())
+  name String
+  color String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  subAccountId String
+  SubAccount SubAccount @relation(fields: [subAccountId], references: [id])
+  tickets Ticket[]
+  @@index([subAccountId])
+}
+
+/*
+Purpose: Represents a kanban board for project management.
+Workflow: Pipelines are created, and lanes are added to organize tasks within a sub-account. */
+model Pipeline{
+  id String @id @default(uuid())
+  name String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  subAccountId String
+  SubAccount SubAccount @relation(fields: [subAccountId], references: [id])
+  lane Lane[]
+}
+
+/*
+Purpose: Represents a column in a kanban board (e.g, To Do, In Progress). 
+Workflow: Lanes are created within pipelines, and tickets are assigned and ordered. */
+model Lane {
+  id String @id @default(uuid())
+  name String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  pipelineId String
+  pipeLine Pipeline @relation(fields: [pipelineId], references: [id])
+  tickets Ticket[]
+  order Int @default(0)
+  @@index([pipelineId])
+}
+
+/*
+Purpose: Represents individual tasks in the Kanban board.
+Workflow: Tickets are created, assigned to users, tagged, and moved across lanes. */
+model Ticket{
+  id String @id @default(uuid())
+  name String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  laneId String
+  order Int @default(0)
+  lane Lane @relation(fields: [laneId], references: [id], onDelete: Cascade)
+  value Decimal?
+  description String?
+  tags Tag[]
+  customerId String?
+  customer Contact? @relation(fields: [customerId], references:[id], onDelete: Cascade)
+  assignedUserId String?
+  assigned User? @relation(fields: [assignedUserId], references: [id], onDelete: Cascade)
+  @@index([laneId])
+  @@index([customerId])
+  @@index([assignedUserId])
+}
+
+model Trigger{
+  id String @id @default(uuid())
+  name String
+  type TriggerType
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  subAccountId String 
+  subAccount SubAccount @relation(fields: [subAccountId], references: [id], onDelete: Cascade)
+  automations Automation[]
+  @@index([subAccountId])
+}
+
+model Automation{
+  id String @id @default(uuid())
+  name String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  published Boolean @default(true)
+  triggerId String
+  trigger Trigger @relation(fields: [triggerId], references: [id])
+  subAccountId String
+  subAccount SubAccount @relation(fields: [subAccountId], references: [id])
+  Action Action[]
+  AutomationInstance AutomationInstance[]
+  @@index([triggerId])
+  @@index([subAccountId])
+}
+
+model AutomationInstance{
+  id String @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  automationId String
+  automation Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  active Boolean @default(false)
+  @@index([automationId])
+}
+
+model Action{
+  id String @id @default(uuid())
+  name String
+  type ActionType
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  automationId String
+  automation Automation @relation(fields: [automationId], references: [id])
+  laneId String @default("0")
+  @@index([automationId])
+}
+
+model Contact{
+  id String @id @default(uuid())
+  name String
+  email String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  subAccountId String
+  subAccount SubAccount @relation(fields: [subAccountId], references: [id])
+  ticket Ticket[]
+  @@index([subAccountId])
+}
+
+model Media{
+  id String @id @default(uuid())
+  type String
+  name String
+  link String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  subAccountId String
+  subAccount SubAccount @relation(fields: [subAccountId], references: [id])
+  @@index([subAccountId])
+}
+
+model Funnel{
+  id String @id @default(uuid())
+  name String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  description String?
+  published Boolean @default(false)
+  subDomainName String? @unique
+  favicon String @db.Text
+  subAccountId String
+  subAccount SubAccount @relation(fields: [subAccountId], references: [id], onDelete: Cascade)
+  FunnelPages FunnelPage[]
+  liveProducts String? @default("[]")
+  className ClassName[]
+  @@index([subAccountId])
+}
+
+model ClassName{
+  id String @id @default(uuid())
+  name String
+  color String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  customData String? @db.LongText
+  funnelId String
+funnel Funnel @relation(fields: [funnelId], references: [id], onDelete: Cascade)
+@@index([funnelId])
+}
+
+model FunnelPage {
+  id           String   @id @default(uuid())
+  name         String
+  pathName     String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  visits       Int      @default(0)
+  content      String   @db.LongText
+  order        Int
+  previewImage String   @db.Text
+  funnelId     String
+  Funnel       Funnel   @relation(fields: [funnelId], references: [id])
+
+  @@index([funnelId])
+}
+
+model AgencySidebarOption {
+  id         String   @id @default(uuid())
+  name       String   @default("Menu")
+  link       String   @default("#")
+  icon       Icon     @default(info)
+  agencyId   String
+  Agency     Agency?  @relation(fields: [agencyId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([agencyId])
+}
+
+model SubAccountSidebarOption {
+  id          String      @id @default(uuid())
+  name        String      @default("Menu")
+  link        String      @default("#")
+  icon        Icon        @default(info)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  subAccountId String
+  SubAccount  SubAccount? @relation(fields: [subAccountId], references: [id])
+
+  @@index([subAccountId])
+}
+
+model Invitation {
+  id        String         @id @default(uuid())
+  email     String         @unique
+  agencyId  String
+  Agency    Agency         @relation(fields: [agencyId], references: [id])
+  status    InvitationStatus @default(PENDING)
+  role      Role           @default(SUBACCOUNT_USER)
+
+  @@index([agencyId])
+}
+
+model Notification {
+  id            String    @id @default(uuid())
+  notification  String
+  agencyId      String
+  subAccountId  String?
+  userId        String
+  User          User      @relation(fields: [userId], references: [id])
+  Agency        Agency    @relation(fields: [agencyId], references: [id])
+  SubAccount    SubAccount? @relation(fields: [subAccountId], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([agencyId])
+  @@index([subAccountId])
+  @@index([userId])
+}
+
+model Subscription {
+  id                  String    @id @default(uuid())
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  plan                Plan?
+  price               Boolean   @default(false)
+  active              Boolean   @default(false)
+  priceId             String
+  customerId          String
+  currentPeriodEndDate DateTime
+  subscriptionId      String    @unique
+  agencyId            String?   @unique
+  Agency              Agency?   @relation(fields: [agencyId], references: [id])
+
+  @@index([customerId])
+  @@index([agencyId])
+}
+
+model AddOns {
+  id          String    @id @default(uuid())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  name        String
+  active      Boolean   @default(false)
+  priceId     String    @unique
+  agencyId    String?
+  Agency      Agency?   @relation(fields: [agencyId], references: [id])
+
+  @@index([agencyId])
+}
+enum AccessLevel {
+  NONE
+  READ
+  WRITE
+  ADMIN
+}
+model Permissions {
+  id           String    @id @default(uuid())
+  userId       String
+  User         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subAccountId String
+  SubAccount   SubAccount @relation(fields: [subAccountId], references: [id], onDelete: Cascade)
+  accessLevel  AccessLevel @default(READ)
+  canManageFunnels Boolean   @default(false)
+  canManageMedia   Boolean   @default(false)
+  canManageTickets Boolean   @default(false)
+  canManageContacts Boolean  @default(false)
+  canManageStripe  Boolean   @default(false)
+  canViewMetrics   Boolean   @default(false)
+  canManageSettings Boolean  @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([subAccountId])
+}

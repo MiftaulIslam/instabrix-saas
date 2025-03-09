@@ -13,8 +13,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <div className=" absolute bottom-0 right-0 w-[150px] h-[150px] md:w-[400px] md:h-[400px] bg-[#32CAFD] rounded-full blur-3xl opacity-10" />
         <Navigation/>
         <hr />
-        <div className='container mx-auto '>
-            
+      
+        <div className='container mx-auto relative z-10'>
       {children}
         </div>
             

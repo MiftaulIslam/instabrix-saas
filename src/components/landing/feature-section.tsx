@@ -6,7 +6,7 @@ const FeatureSection = () => {
     <section className="py-16">
       <div className="w-full flex flex-col md:flex-row justify-between items-center mb-12">
         <div className="text-2xl md:text-4xl font-semibold mb-3 max-w-lg">
-          <h2 className="w-full from-[#ffffff] to-secondary  bg-gradient-to-br bg-clip-text text-transparent">
+          <h2 className="w-full text-secondary-foreground dark:from-[#ffffff] dark:to-secondary dark:text-transparent bg-gradient-to-br bg-clip-text ">
             Powerful features to help you manage all your leads
           </h2>
         </div>
